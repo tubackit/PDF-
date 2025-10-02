@@ -10,6 +10,7 @@
     <meta name="author" content="PDF Tools">
     <meta name="robots" content="index, follow">
     
+    
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
     
@@ -33,6 +34,7 @@
     <!-- Toast notification container -->
     <div id="toast-container" class="toast-container"></div>
     
+    
     <!-- Top controls -->
     <div class="top-controls">
         <!-- Developer credit -->
@@ -51,15 +53,32 @@
         </button>
     </div>
 
+    <!-- Marquee Text -->
+    <div class="marquee-container">
+        <div class="marquee-content">
+            <span class="marquee-text">🎉 Viel Spaß mit der Software, ich hoffe sie erleichtert dir deine Arbeit. Für jede Idee zu Verbesserung gerne per Email an tubackit@gmail.com 💌</span>
+        </div>
+    </div>
+
     <header class="mode-switcher">
-        <button id="mode-split-btn" class="active">PDF Splitten</button>
-        <button id="mode-merge-btn">PDF Zusammenfügen</button>
-        <button id="mode-sign-btn">PDF Signieren</button>
+        <button id="mode-split-btn" class="active" aria-describedby="split-desc">
+            <span class="mode-icon">✂️</span>
+            <span class="mode-text">PDF Splitten</span>
+            <span id="split-desc" class="sr-only">PDF-Dateien in einzelne Seiten aufteilen</span>
+        </button>
+        <button id="mode-merge-btn" aria-describedby="merge-desc">
+            <span class="mode-icon">🔗</span>
+            <span class="mode-text">PDF Zusammenfügen</span>
+            <span id="merge-desc" class="sr-only">Mehrere PDF-Dateien zu einer zusammenfügen</span>
+        </button>
+        <button id="mode-sign-btn" aria-describedby="sign-desc">
+            <span class="mode-icon">✍️</span>
+            <span class="mode-text">PDF Signieren</span>
+            <span id="sign-desc" class="sr-only">PDF-Dateien mit digitaler Unterschrift versehen</span>
+        </button>
     </header>
 
     <main class="container">
-        <!-- Skip to main content link for screen readers -->
-        <a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
         
         <div id="split-view">
             <h1 id="main-content">PDF splitten</h1>
@@ -172,6 +191,15 @@
             <section id="result-section" class="hidden">
                 <h2>Downloads</h2>
                 <div id="loader" class="loader hidden"></div>
+                
+                <!-- Bulk download button -->
+                <div id="bulk-download-section" class="bulk-download-section hidden">
+                    <button id="download-all-btn" class="download-all-btn">
+                        <span class="download-icon">📦</span>
+                        <span class="download-text">Alle Seiten als ZIP herunterladen</span>
+                    </button>
+                </div>
+                
                 <p id="preview-info" class="small-instructions hidden">Vorschau der aufgeteilten Seiten. Klicken Sie auf einen Link, um die einzelne Seite herunterzuladen.</p>
                 <div id="download-links"></div>
             </section>
@@ -386,10 +414,12 @@
                 <div id="download-link-sign"></div>
             </section>
         </div>
+
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
         // Ensure pdfjsLib is loaded and configured properly
         document.addEventListener('DOMContentLoaded', function() {

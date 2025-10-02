@@ -22,6 +22,8 @@ const resultSection = document.getElementById('result-section');
 const downloadLinksContainer = document.getElementById('download-links');
 const loader = document.getElementById('loader');
 const previewInfo = document.getElementById('preview-info');
+const bulkDownloadSection = document.getElementById('bulk-download-section');
+const downloadAllBtn = document.getElementById('download-all-btn');
 
 // Merge View
 const uploadInputMerge = document.getElementById('pdf-upload-merge');
@@ -52,10 +54,13 @@ const resultSectionSign = document.getElementById('result-section-sign');
 const loaderSign = document.getElementById('loader-sign');
 const downloadLinkSignContainer = document.getElementById('download-link-sign');
 
+
+
 // --- State ---
 let pdfBytes = null;
 let mergeDocs = []; // Holds { name, pdfDoc, element }
 let selectedPages = new Set(); // Track selected pages for splitting
+let splitPdfPages = []; // Store split PDF pages for bulk download
 let signatureCanvas = null;
 let signatureContext = null;
 let isDrawing = false;
@@ -342,6 +347,7 @@ function updateSplitButtonState() {
     splitBtn.textContent = text;
 }
 
+
 async function setupPageSelectionList(pageCount) {
     const pageSelection = document.getElementById('page-selection');
     const pageSelectionList = document.getElementById('page-selection-list');
@@ -486,32 +492,129 @@ async function createPageItemWithPreview(pageIndex, pdfJsDoc) {
     pageSelectionList.appendChild(pageItem);
 }
 
-// Accessibility functionality
+// Enhanced Accessibility functionality
 function setupAccessibility() {
     // Keyboard navigation for upload areas
     const uploadAreaSplit = document.getElementById('upload-area-split');
     const uploadAreaMerge = document.getElementById('upload-area-merge');
+    const uploadAreaSign = document.getElementById('upload-area-sign');
     
-    if (uploadAreaSplit) {
-        uploadAreaSplit.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                uploadInput.click();
-            }
-        });
-    }
+    // Enhanced keyboard navigation
+    [uploadAreaSplit, uploadAreaMerge, uploadAreaSign].forEach(area => {
+        if (area) {
+            area.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const inputId = area.id.replace('upload-area-', 'pdf-upload') + 
+                                   (area.id.includes('merge') ? '-merge' : 
+                                    area.id.includes('sign') ? '-sign' : '');
+                    const input = document.getElementById(inputId);
+                    if (input) input.click();
+                }
+            });
+        }
+    });
     
-    if (uploadAreaMerge) {
-        uploadAreaMerge.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                uploadInputMerge.click();
-            }
-        });
-    }
+    // Setup keyboard shortcuts
+    setupKeyboardShortcuts();
     
-    // Announce status changes to screen readers
+    // Enhanced screen reader support
     setupScreenReaderAnnouncements();
+    
+    // Focus management
+    setupFocusManagement();
+    
+    // High contrast mode detection
+    setupHighContrastSupport();
+}
+
+// Keyboard shortcuts for power users
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        // Only activate shortcuts when not in input fields
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            return;
+        }
+        
+        const isCtrl = e.ctrlKey || e.metaKey;
+        
+        if (isCtrl) {
+            switch (e.key) {
+                case '1':
+                    e.preventDefault();
+                    switchMode('split');
+                    announceToScreenReader('PDF Splitten Modus aktiviert');
+                    break;
+                case '2':
+                    e.preventDefault();
+                    switchMode('merge');
+                    announceToScreenReader('PDF Zusammenfügen Modus aktiviert');
+                    break;
+                case '3':
+                    e.preventDefault();
+                    switchMode('sign');
+                    announceToScreenReader('PDF Signieren Modus aktiviert');
+                    break;
+                case 'd':
+                    e.preventDefault();
+                    toggleDarkMode();
+                    announceToScreenReader(`Dark Mode ${document.documentElement.getAttribute('data-theme') === 'dark' ? 'aktiviert' : 'deaktiviert'}`);
+                    break;
+            }
+        }
+    });
+}
+
+// Enhanced screen reader announcements
+function announceToScreenReader(message, priority = 'polite') {
+    const announcement = document.createElement('div');
+    announcement.setAttribute('aria-live', priority);
+    announcement.setAttribute('aria-atomic', 'true');
+    announcement.className = 'sr-only';
+    announcement.textContent = message;
+    
+    document.body.appendChild(announcement);
+    
+    // Remove after announcement
+    setTimeout(() => {
+        document.body.removeChild(announcement);
+    }, 1000);
+}
+
+// Focus management for better navigation
+function setupFocusManagement() {
+    // Focus trap for modals (if any)
+    let focusableElements = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    
+    // Store last focused element
+    let lastFocusedElement = null;
+    
+    document.addEventListener('focusin', (e) => {
+        lastFocusedElement = e.target;
+    });
+    
+    // Return focus after operations
+    window.returnFocus = function() {
+        if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+            lastFocusedElement.focus();
+        }
+    };
+}
+
+// High contrast mode support
+function setupHighContrastSupport() {
+    if (window.matchMedia('(prefers-contrast: high)').matches) {
+        document.documentElement.setAttribute('data-high-contrast', 'true');
+    }
+    
+    // Listen for changes
+    window.matchMedia('(prefers-contrast: high)').addEventListener('change', (e) => {
+        if (e.matches) {
+            document.documentElement.setAttribute('data-high-contrast', 'true');
+        } else {
+            document.documentElement.removeAttribute('data-high-contrast');
+        }
+    });
 }
 
 function setupScreenReaderAnnouncements() {
@@ -732,6 +835,7 @@ modeSignBtn.addEventListener('click', () => switchMode('sign'));
 // Splitter
 uploadInput.addEventListener('change', handleFileSelectSplit);
 splitBtn.addEventListener('click', handleSplitPdf);
+downloadAllBtn.addEventListener('click', handleDownloadAllPages);
 
 // Merger
 uploadInputMerge.addEventListener('change', handleFileSelectMerge);
@@ -742,6 +846,7 @@ uploadInputSign.addEventListener('change', handleFileSelectSign);
 signBtn.addEventListener('click', handleSignPdf);
 clearSignatureBtn.addEventListener('click', clearSignature);
 undoSignatureBtn.addEventListener('click', undoSignature);
+
 
 // Drag & Drop functionality
 setupDragAndDrop();
@@ -761,30 +866,32 @@ setupInstallButton();
 // --- Functions ---
 
 function switchMode(mode) {
+    // Hide all views
+    splitView.classList.add('hidden');
+    mergeView.classList.add('hidden');
+    signView.classList.add('hidden');
+    
+    // Remove active class from all mode buttons
+    modeSplitBtn.classList.remove('active');
+    modeMergeBtn.classList.remove('active');
+    modeSignBtn.classList.remove('active');
+    
+    // Show selected view and activate corresponding button
     if (mode === 'split') {
         splitView.classList.remove('hidden');
-        mergeView.classList.add('hidden');
-        signView.classList.add('hidden');
         modeSplitBtn.classList.add('active');
-        modeMergeBtn.classList.remove('active');
-        modeSignBtn.classList.remove('active');
-        resetSplitUI();
-    } else if (mode === 'merge') {
-        splitView.classList.add('hidden');
-        mergeView.classList.remove('hidden');
-        signView.classList.add('hidden');
-        modeSplitBtn.classList.remove('active');
-        modeMergeBtn.classList.add('active');
-        modeSignBtn.classList.remove('active');
         resetMergeUI();
-    } else if (mode === 'sign') {
-        splitView.classList.add('hidden');
-        mergeView.classList.add('hidden');
-        signView.classList.remove('hidden');
-        modeSplitBtn.classList.remove('active');
-        modeMergeBtn.classList.remove('active');
-        modeSignBtn.classList.add('active');
         resetSignUI();
+    } else if (mode === 'merge') {
+        mergeView.classList.remove('hidden');
+        modeMergeBtn.classList.add('active');
+        resetSplitUI();
+        resetSignUI();
+    } else if (mode === 'sign') {
+        signView.classList.remove('hidden');
+        modeSignBtn.classList.add('active');
+        resetSplitUI();
+        resetMergeUI();
     }
 }
 
@@ -792,12 +899,14 @@ function resetSplitUI() {
     processingSection.classList.add('hidden');
     resultSection.classList.add('hidden');
     previewInfo.classList.add('hidden');
+    bulkDownloadSection.classList.add('hidden');
     document.getElementById('page-selection').classList.add('hidden');
     downloadLinksContainer.innerHTML = '';
     splitBtn.disabled = true;
     splitBtn.textContent = 'PDF Splitten';
     pdfBytes = null;
     selectedPages.clear();
+    splitPdfPages = [];
     uploadInput.value = '';
     // Make sure the upload section is visible again after a reset
     document.querySelector('#split-view .upload-section').classList.remove('hidden');
@@ -821,6 +930,7 @@ function resetSignUI() {
     pdfBytes = null;
     uploadInputSign.value = '';
 }
+
 
 async function handleFileSelectSign(event) {
     const file = event.target.files[0];
@@ -889,6 +999,7 @@ async function handleFileSelectSplit(event) {
     reader.readAsArrayBuffer(file);
 }
 
+
 async function handleSplitPdf() {
     if (!pdfBytes) {
         showWarning('Bitte zuerst eine PDF-Datei hochladen.');
@@ -938,6 +1049,13 @@ async function handleSplitPdf() {
             const newPdfBytes = await newPdfDoc.save();
             const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
+
+            // Store PDF page for bulk download
+            splitPdfPages.push({
+                name: `Seite-${pageIndex + 1}.pdf`,
+                bytes: newPdfBytes,
+                url: url
+            });
 
             // Create preview item container
             const previewItem = document.createElement('div');
@@ -997,6 +1115,9 @@ async function handleSplitPdf() {
             }
         }
         
+        // Show bulk download button
+        bulkDownloadSection.classList.remove('hidden');
+        
         // Hide progress and show success
         hideProgress('progress-container');
         showSuccess(`${totalPages} Seite${totalPages > 1 ? 'n' : ''} erfolgreich aufgeteilt!`);
@@ -1008,6 +1129,50 @@ async function handleSplitPdf() {
     } finally {
         loader.classList.add('hidden');
         splitBtn.disabled = false;
+    }
+}
+
+async function handleDownloadAllPages() {
+    if (!splitPdfPages || splitPdfPages.length === 0) {
+        showWarning('Keine Seiten zum Herunterladen verfügbar.');
+        return;
+    }
+
+    try {
+        downloadAllBtn.disabled = true;
+        downloadAllBtn.innerHTML = '<span class="download-icon">⏳</span><span class="download-text">ZIP wird erstellt...</span>';
+
+        // Create ZIP file
+        const zip = new JSZip();
+        
+        // Add all PDF pages to ZIP
+        splitPdfPages.forEach((page, index) => {
+            zip.file(page.name, page.bytes);
+        });
+
+        // Generate ZIP file
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        
+        // Create download link
+        const zipUrl = URL.createObjectURL(zipBlob);
+        const zipFileName = `Alle-Seiten-${new Date().toISOString().slice(0, 10)}.zip`;
+        
+        const downloadLink = document.createElement('a');
+        downloadLink.href = zipUrl;
+        downloadLink.download = zipFileName;
+        downloadLink.click();
+        
+        // Clean up
+        URL.revokeObjectURL(zipUrl);
+        
+        showSuccess(`${splitPdfPages.length} Seiten als ZIP heruntergeladen!`);
+        
+    } catch (error) {
+        console.error('Fehler beim Erstellen der ZIP-Datei:', error);
+        showError('Fehler beim Erstellen der ZIP-Datei. Bitte versuchen Sie es erneut.');
+    } finally {
+        downloadAllBtn.disabled = false;
+        downloadAllBtn.innerHTML = '<span class="download-icon">📦</span><span class="download-text">Alle Seiten als ZIP herunterladen</span>';
     }
 }
 
@@ -1500,6 +1665,8 @@ async function handleSignPdf() {
         signBtn.disabled = false;
     }
 }
+
+
 
 
 // Initialize dark mode when page loads

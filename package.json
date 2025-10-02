@@ -2,18 +2,15 @@
   "name": "pdf-tools-enhanced",
   "version": "2.0.0",
   "description": "Professional PDF splitting and merging application with modern UI/UX",
-  "main": "main.js",
+  "main": "index.html",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev",
-    "build": "electron-builder",
-    "build-win": "electron-builder --win",
-    "build-mac": "electron-builder --mac",
-    "build-linux": "electron-builder --linux",
-    "dist": "npm run build",
+    "start": "python -m http.server 8000",
     "serve": "npx serve .",
+    "dev": "npx live-server --port=3000 --open=/",
+    "build": "echo 'No build step required - static files'",
     "test": "echo 'No tests specified'",
-    "lint": "echo 'No linting configured'"
+    "lint": "echo 'No linting configured'",
+    "deploy": "echo 'Deploy to your preferred static hosting service'"
   },
   "keywords": [
     "pdf",
@@ -47,8 +44,6 @@
     "not ie 11"
   ],
   "devDependencies": {
-    "electron": "^27.0.0",
-    "electron-builder": "^24.6.4",
     "live-server": "^1.2.2",
     "serve": "^14.2.1"
   },
@@ -116,37 +111,6 @@
     "memory_optimization": true,
     "web_workers": true,
     "caching": true
-  },
-  "build": {
-    "appId": "com.pdftools.enhanced",
-    "productName": "PDF Tools",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "**/*",
-      "!node_modules",
-      "!dist",
-      "!*.md"
-    ],
-    "win": {
-      "target": "nsis",
-      "requestedExecutionLevel": "asInvoker"
-    },
-    "mac": {
-      "target": "dmg",
-      "icon": "assets/icon.png"
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    }
   }
 }
 
